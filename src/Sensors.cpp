@@ -55,8 +55,6 @@ float Sensors::readThermistor(int channel) {
   int16_t adcValue = ads.readADC_SingleEnded(channel);
   float voltage = adcToVoltage(adcValue);
 
-  Serial.println(voltage);
-
   if (voltage <= 0.001f) return NAN;
 
   // Termistor a Vcc, resistencia a GND

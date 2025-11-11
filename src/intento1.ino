@@ -48,18 +48,26 @@ void setup() {
 }
 
 void loop() {
+  if (!zeroCrossDetected) return;
+  
+  portENTER_CRITICAL(&mux);
+  zeroCrossDetected = false;
+  portEXIT_CRITICAL(&mux);
 
-  if (zeroCrossDetected) {
-    portENTER_CRITICAL(&mux);
-    zeroCrossDetected = false;
-    portEXIT_CRITICAL(&mux);
+  // Si no hay flujo de agua o el calentador no está encendido, se desactiva el triac
+  float waterFlow = systemState.getWaterFlow();
+  bool isOn = systemState.getOn();
+  if (waterFlow < 3.0 || !isOn) {
+    timerAlarmDisable(timer);
+    digitalWrite(TRIAC_PIN, LOW);
+    return;
+  }
 
-    int target = systemState.getTarget();
+  int target = systemState.getTarget();
 
-    int firingDelay = map(target, 0, 100, MAX_DELAY, MIN_DELAY);
+  int firingDelay = map(target, 0, 100, MAX_DELAY, MIN_DELAY);
 
     timerAlarmWrite(timer, firingDelay, false);
     timerAlarmEnable(timer);
     timerRestart(timer);
-  }
 }
