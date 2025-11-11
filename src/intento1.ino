@@ -1,0 +1,65 @@
+#include <Arduino.h>
+#include "KiLL.h"
+#include "EncoderTask.h"
+#include "MqttController.h"
+
+#define ZC_PIN     26
+#define TRIAC_PIN  25
+
+const int FREQ = 60;                   
+const int HALF_CYCLE_US = 8333;        
+const int MIN_DELAY = 0;               
+const int MAX_DELAY = HALF_CYCLE_US;
+
+volatile bool zeroCrossDetected = false;
+portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+
+hw_timer_t *timer = NULL;
+KiLL systemState;
+EncoderTask encoder(&systemState);
+MQTTController mqtt(&systemState);
+
+void IRAM_ATTR fireTriac() {
+  digitalWrite(TRIAC_PIN, HIGH);
+  delayMicroseconds(50);
+  digitalWrite(TRIAC_PIN, LOW);
+}
+
+void IRAM_ATTR onZeroCross() {
+  zeroCrossDetected = true;
+}
+
+void setup() {
+  Serial.begin(115200);
+  systemState.begin();
+  encoder.begin();
+  mqtt.begin();
+  mqtt.connectGlobal("INFINITUM0453_2.4", "7WNr3uRwH4");
+
+  pinMode(ZC_PIN, INPUT);
+  pinMode(TRIAC_PIN, OUTPUT);
+  digitalWrite(TRIAC_PIN, LOW);
+
+  timer = timerBegin(0, 80, true);
+  timerAttachInterrupt(timer, &fireTriac, true);
+
+  attachInterrupt(digitalPinToInterrupt(ZC_PIN), onZeroCross, RISING);
+
+}
+
+void loop() {
+
+  if (zeroCrossDetected) {
+    portENTER_CRITICAL(&mux);
+    zeroCrossDetected = false;
+    portEXIT_CRITICAL(&mux);
+
+    int target = systemState.getTarget();
+
+    int firingDelay = map(target, 0, 100, MAX_DELAY, MIN_DELAY);
+
+    timerAlarmWrite(timer, firingDelay, false);
+    timerAlarmEnable(timer);
+    timerRestart(timer);
+  }
+}
