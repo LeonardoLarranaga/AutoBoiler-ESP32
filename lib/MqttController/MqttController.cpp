@@ -164,51 +164,41 @@ bool MQTTController::connectToWifiTemp(const char* ssid, const char* password, u
     return WiFi.status() == WL_CONNECTED;
 }
 
-void MQTTController::brokerTask(void* pvParameters) {
-    MQTTController* self = static_cast<MQTTController*>(pvParameters);
+void MQTTController::runTaskLoop(bool isServer) {
     unsigned long lastPublish = 0;
 
     for (;;) {
-        self->broker.loop();
+        if (isServer) {
+            client.loop();
+        } else {
+            broker.loop();
+        }
 
         unsigned long now = millis();
         if (now - lastPublish >= 3000) {
             lastPublish = now;
-            self->publishCombined(false, false);
-            self->publishFloat(self->topicTarget, self->system->getTarget(), false, true);
-            if(self->system->getOn())
-                self->publishFloat(self->topicIsOn, 1, false, true);
-            else 
-                self->publishFloat(self->topicIsOn, 0, false, true);
+            publishCombined(isServer, false);
+            publishFloat(topicTarget, system->getTarget(), isServer, true);
+            
+            if (system->getOn()) {
+                publishInt(topicIsOn, isServer ? 0 : 1, isServer, true);
+            } else {
+                publishInt(topicIsOn, isServer ? 1 : 0, isServer, true);
+            }
         }
 
         vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 }
 
+void MQTTController::brokerTask(void* pvParameters) {
+    MQTTController* self = static_cast<MQTTController*>(pvParameters);
+    self->runTaskLoop(false);
+}
+
 void MQTTController::mqttTask(void* pvParameters) {
     MQTTController* self = static_cast<MQTTController*>(pvParameters);
-    unsigned long lastPublish = 0;
-
-    for (;;) {
-        self->client.loop();
-
-        unsigned long now = millis();
-        if (now - lastPublish >= 3000) {
-            self->publishCombined(true, false);
-            self->publishFloat(self->topicTarget, self->system->getTarget(), true, true);
-
-            if (self->system->getOn()) {
-                self->publishInt(self->topicIsOn, 0, true, true);
-            } else {
-                self->publishInt(self->topicIsOn, 1, true, true);
-            }
-
-            lastPublish = now;
-        }
-
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-    }
+    self->runTaskLoop(true);
 }
 
 
@@ -228,15 +218,14 @@ void MQTTController::publishInt(const String& topic, int value, bool server, boo
 }
 
 void MQTTController::publishCombined(bool server, bool retain) {
-    // Formato: power,flow,tempOut,tempin con 2 decimales
     float power = system->getPower();
     float flow = system->getWaterFlow();
     float tempOut = system->getTemperatureOut();
     float tempIn = system->getTemperatureIn();
-    float target = system->getTarget();
+    int target = system->getTarget();
 
     char buffer[64];
-    snprintf(buffer, sizeof(buffer), "%.2f,%.2f,%.2f,%.2f,%.2f", power, flow, tempOut, tempIn, target);
+    snprintf(buffer, sizeof(buffer), "%.2f,%.2f,%.2f,%.2f,%d", power, flow, tempOut, tempIn, target);
 
     if (server) client.publish(topicUpdates.c_str(), buffer, retain);
     else broker.publish(topicUpdates.c_str(), buffer, retain);

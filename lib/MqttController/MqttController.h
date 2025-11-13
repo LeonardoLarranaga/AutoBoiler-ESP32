@@ -18,6 +18,7 @@ public:
     void connectLocal();   
 
 private:
+    void runTaskLoop(bool isServer);
     static void brokerTask(void* pvParameters);
     static void mqttTask(void* pvParameters);
     void publishFloat(const String& topic, float value, bool server, bool retain);
