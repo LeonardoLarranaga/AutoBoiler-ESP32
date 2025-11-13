@@ -33,7 +33,7 @@ void EncoderTask::task(void* pvParameters) {
   bool firstLoop = true;
 
   for (;;) {
-    // ======== Lectura del encoder ========
+    // Lectura del encoder
     long rawEncoder = self->encoder.getCount() / 2;
 
     // Actualizar minTemp dinámicamente basado en tempIn + 2
@@ -56,7 +56,7 @@ void EncoderTask::task(void* pvParameters) {
       self->state->setTarget(newValue);
     }
 
-    // ======== Lectura del botón ========
+    // Lectura del botón
     self->button.loop();
 
     if (self->button.isPressed()) {

@@ -91,7 +91,7 @@ void MQTTController::callback(char* topic, byte* payload, unsigned int length) {
     String topicStr = String(topic);
 
     if (topicStr == topicTasteWifi) {
-        StaticJsonDocument<128> doc;
+        JsonDocument doc;
         DeserializationError error = deserializeJson(doc, msg);
       
         const char* ssid = doc["ssid"];
@@ -102,7 +102,7 @@ void MQTTController::callback(char* topic, byte* payload, unsigned int length) {
         
     }
     else if (topicStr == topicSaveCredentials) {
-        StaticJsonDocument<256> doc;
+        JsonDocument doc;
         DeserializationError error = deserializeJson(doc, msg);
         if (error) {
             system->results("JSON Inválido saveConfirm");

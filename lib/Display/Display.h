@@ -6,6 +6,7 @@
 #include <Adafruit_SSD1306.h>
 #include "time.h"
 #include <WiFi.h>
+#include "I2CBus.h"
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
@@ -26,7 +27,7 @@ public:
     void showStatusOnline(int wifiStrength, const char* date, const char* time);
     void showStatusOffline(const char* left);
 
-    //Display control
+    // Display control
     void displayOff();
     void displayOn();
     void clearDisplay();

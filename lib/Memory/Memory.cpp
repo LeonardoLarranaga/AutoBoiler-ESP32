@@ -24,12 +24,10 @@ String Memory::getBoilerId() {
 void Memory::write(const String& ssid, const String& password) {
   EEPROM.begin(EEPROM_SIZE);
 
-  for (int i = 0; i < ssid.length(); i++)
-    EEPROM.write(SSID_ADDRESS + i, ssid[i]);
+  for (int i = 0; i < ssid.length(); i++) EEPROM.write(SSID_ADDRESS + i, ssid[i]);
   EEPROM.write(SSID_ADDRESS + ssid.length(), '\0');
 
-  for (int i = 0; i < password.length(); i++)
-    EEPROM.write(PASS_ADDRESS + i, password[i]);
+  for (int i = 0; i < password.length(); i++) EEPROM.write(PASS_ADDRESS + i, password[i]);
   EEPROM.write(PASS_ADDRESS + password.length(), '\0');
 
   EEPROM.commit();
@@ -38,8 +36,7 @@ void Memory::write(const String& ssid, const String& password) {
 void Memory::writeBoilerId(const String& boilerId) {
   EEPROM.begin(EEPROM_SIZE);
 
-  for (int i = 0; i < boilerId.length(); i++)
-    EEPROM.write(BOILER_ID_ADDRESS + i, boilerId[i]);
+  for (int i = 0; i < boilerId.length(); i++) EEPROM.write(BOILER_ID_ADDRESS + i, boilerId[i]);
   EEPROM.write(BOILER_ID_ADDRESS + boilerId.length(), '\0');
 
   EEPROM.commit();

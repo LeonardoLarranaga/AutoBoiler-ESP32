@@ -8,7 +8,7 @@ KiLL::KiLL() :
   isOn(false),
   isOnline(true){}
 
-// ======= SETTERS =======
+// MARK: SETTERS
 void KiLL::setTarget(int value) { 
   target = value; 
   display.showTargetTemperature(value);
@@ -32,7 +32,7 @@ void KiLL::setPower(float value) {
   power = value; 
 }
 
-// ======= GETTERS =======
+// MARK: GETTERS
 bool KiLL::getOn() { return isOn; }
 String KiLL::getBoilerId() { return boilerId; }
 int KiLL::getTarget() { return target; }
@@ -94,5 +94,3 @@ void KiLL::started() {
     display.showStatusOffline(("KiLL-" + boilerId).c_str());
   }
 }
-
-

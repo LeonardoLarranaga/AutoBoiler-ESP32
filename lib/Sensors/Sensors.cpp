@@ -1,6 +1,5 @@
 #include "Sensors.h"
 
-// === Configuración global del sensor de flujo ===
 #define FLOW_PIN 15     
 #define FLOW_TYPE YFS201  
 
@@ -46,14 +45,10 @@ bool Sensors::begin() {
   ads.setGain(GAIN_ONE);  
   xSemaphoreGive(getI2CMutex());
 
-  // --- Sensor de flujo ---
   flowSensor.begin(flowCountISR);
-  Serial.println("✅ Sensor de flujo YF-B1 iniciado correctamente");
 
   emon1.current(currentPin, 100.0); 
-  Serial.println("✅ Sensor de corriente SCT-013 iniciado correctamente");
 
-  Serial.println("✅ ADS1115 iniciado correctamente");
   return true;
 }
 
@@ -62,7 +57,6 @@ float Sensors::adcToVoltage(int16_t raw) {
 }
 
 float Sensors::readThermistor(int channel) {
-  // Lectura simple (se usa por compatibilidad en otros métodos)
   xSemaphoreTake(getI2CMutex(), portMAX_DELAY);
   int16_t adcValue = ads.readADC_SingleEnded(channel);
   xSemaphoreGive(getI2CMutex());
@@ -95,12 +89,10 @@ float Sensors::readThermistorFiltered(int channel) {
   for (int i = 0; i < samples; i++) {
     int16_t adcValue = ads.readADC_SingleEnded(channel);
     vals[i] = adcToVoltage(adcValue);
-    // pequeña separación opcional si fuese necesario
-    // delayMicroseconds(200);
   }
   xSemaphoreGive(getI2CMutex());
 
-  // Ordenar (burbuja simple por tamaño pequeño)
+  // Ordenar muestras
   for (int i = 0; i < samples - 1; i++) {
     for (int j = i + 1; j < samples; j++) {
       if (vals[j] < vals[i]) {

@@ -27,7 +27,6 @@ private:
     bool connectToWifiTemp(const char* ssid, const char* password, unsigned long timeout);
     void callback(char* topic, byte* payload, unsigned int length);
     
-
     WiFiClient espClient;
     PubSubClient client;
     PicoMQTT::Server broker;  

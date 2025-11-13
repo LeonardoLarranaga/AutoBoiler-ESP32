@@ -5,10 +5,10 @@
 
 class Memory {
 private:
-  static constexpr int EEPROM_SIZE = 250;     // Tamaño total
-  static constexpr int SSID_ADDRESS = 0;      // Inicio SSID
-  static constexpr int PASS_ADDRESS = 75;     // Inicio Password
-  static constexpr int BOILER_ID_ADDRESS = 150; // Inicio Boiler ID
+  static constexpr int EEPROM_SIZE = 250;     
+  static constexpr int SSID_ADDRESS = 0;     
+  static constexpr int PASS_ADDRESS = 75;     
+  static constexpr int BOILER_ID_ADDRESS = 150; 
 
 public:
   static void initialize();

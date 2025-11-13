@@ -22,17 +22,16 @@ private:
     OLEDDisplay display;
 
 public:
-    
     KiLL();
 
-    // ======= SETTERS =======
+    // MARK: SETTERS
     void setTarget(int value);
     void setOn(bool state);
     void setOnline(bool state);
     void setPower(float value);      
     void toggleOn();         
 
-    // ======= GETTERS =======
+    // MARK: GETTERS
     int getTarget();
     float getWaterFlow();
     float getTemperatureIn();
@@ -50,7 +49,6 @@ public:
     void onAdvice();
 
     void started();
-
 };
 
 #endif

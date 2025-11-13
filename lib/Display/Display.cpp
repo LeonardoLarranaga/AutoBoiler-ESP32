@@ -1,6 +1,4 @@
 #include "Display.h"
-#include <Arduino.h>
-#include "I2CBus.h"
 
 OLEDDisplay::OLEDDisplay(): 
     sda(19), 
@@ -30,7 +28,7 @@ void OLEDDisplay::begin() {
 void OLEDDisplay::showStatusOffline(const char* left) {
     display.fillRect(0, 0, SCREEN_WIDTH, 12, SSD1306_BLACK);
 
-    //Texto wiffi
+    //Texto wifi
     display.setTextSize(1);         
     display.setCursor(0, 2);
     display.print(left);
@@ -43,7 +41,7 @@ void OLEDDisplay::showStatusOffline(const char* left) {
 void OLEDDisplay::showStatusOnline(int wifiStrength, const char* date, const char* time) {
     display.fillRect(0, 0, SCREEN_WIDTH, 12, SSD1306_BLACK);
 
-    //Texto wiffi
+    //Texto wifi
     display.setTextSize(1);         
     display.setCursor(0, 2);
     display.print("WiFi");
@@ -234,7 +232,7 @@ void OLEDDisplay::message(const char* title, const char* text) {
 void OLEDDisplay::showStartupAnimation() {
     display.clearDisplay();
 
-    // 🌕 1. Animación de “carga circular”
+    // Animación de carga circular
     for (int r = 0; r < 30; r += 2) {
         display.clearDisplay();
         display.drawCircle(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, r, SSD1306_WHITE);
@@ -244,7 +242,7 @@ void OLEDDisplay::showStartupAnimation() {
         delay(40);
     }
 
-    // 🔆 2. Pequeña expansión y contracción
+    // Pequeña expansión y contracción
     for (int r = 30; r > 10; r -= 2) {
         display.clearDisplay();
         display.drawCircle(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, r, SSD1306_WHITE);
@@ -254,7 +252,7 @@ void OLEDDisplay::showStartupAnimation() {
         delay(25);
     }
 
-    // 💬 3. Mensaje de inicio con fade-in
+    // Mensaje de inicio con efecto de escritura
     const char* msg = "KiLL";
     for (int i = 0; i <= strlen(msg); i++) {
         display.clearDisplay();
@@ -273,50 +271,45 @@ void OLEDDisplay::showStartupAnimation() {
 }
 
 void OLEDDisplay::startAutoStatus() {
-    if (wifiClockTaskHandle == nullptr) {
-        xTaskCreatePinnedToCore(
-            [](void* param) {
-                OLEDDisplay* self = static_cast<OLEDDisplay*>(param);
-                struct tm timeinfo;
+    if (wifiClockTaskHandle != nullptr) return; 
+    xTaskCreatePinnedToCore([](void* param) {
+        OLEDDisplay* self = static_cast<OLEDDisplay*>(param);
+        struct tm timeinfo;
 
-        
-                configTime(0, 0, "pool.ntp.org", "time.nist.gov");
-                setenv("TZ", "PST8PDT,M3.2.0/2,M11.1.0/2", 1); 
-                tzset();
+        configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+        setenv("TZ", "PST8PDT,M3.2.0/2,M11.1.0/2", 1); 
+        tzset();
 
-                for (;;) {
-                    if (WiFi.status() == WL_CONNECTED) {
-                        if (getLocalTime(&timeinfo)) {
-                            // Hora HH:MM
-                            char timeString[6];
-                            strftime(timeString, sizeof(timeString), "%H:%M", &timeinfo);
+        for (;;) {
+            if (WiFi.status() != WL_CONNECTED) {
+                self->showStatusOffline("WiFi");
+                vTaskDelay(pdMS_TO_TICKS(10000)); 
+                continue;
+            }
 
-                            // Fecha DD/MM
-                            char dateString[6];
-                            strftime(dateString, sizeof(dateString), "%d/%m", &timeinfo);
+            if (getLocalTime(&timeinfo)) {
+                // Hora HH:MM
+                char timeString[6];
+                strftime(timeString, sizeof(timeString), "%H:%M", &timeinfo);
 
-                            // Fuerza WiFi
-                            int wifiStrength = WiFi.RSSI();
+                // Fecha DD/MM
+                char dateString[6];
+                strftime(dateString, sizeof(dateString), "%d/%m", &timeinfo);
 
-                            // Mostrar en la barra superior
-                            self->showStatusOnline(wifiStrength, dateString, timeString);
-                        }
-                    } else {
-                        self->showStatusOnline(0, "--:--", "--/--");
-                    }
+                // Fuerza WiFi
+                int wifiStrength = WiFi.RSSI();
 
-                    vTaskDelay(pdMS_TO_TICKS(10000)); 
-                }
-            },
-            "WiFiClockTask",
-            8192,
-            this,
-            1,
-            &wifiClockTaskHandle,
-            1
-        );
-    }
+                // Mostrar en la barra superior
+                self->showStatusOnline(wifiStrength, dateString, timeString);
+                vTaskDelay(pdMS_TO_TICKS(10000)); 
+            }
+        }
+    },
+        "WiFiClockTask",
+        8192,
+        this,
+        1,
+        &wifiClockTaskHandle,
+        1
+    );
 }
-
-
-
