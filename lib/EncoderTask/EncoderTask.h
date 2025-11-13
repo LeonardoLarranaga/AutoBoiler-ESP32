@@ -10,6 +10,7 @@ public:
   EncoderTask(KiLL* sys);
   void begin();
   static void task(void* pvParameters);
+  static constexpr int MAX_TEMP = 50;
 
 private:
   ESP32Encoder encoder;

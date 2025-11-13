@@ -5,7 +5,7 @@ KiLL::KiLL() :
   temperatureIn(0),
   temperatureOut(0), 
   power(0), 
-  isOn(true),
+  isOn(false),
   isOnline(true){}
 
 // ======= SETTERS =======
@@ -26,6 +26,10 @@ void KiLL::setOn(bool state) {
 
 void KiLL::setOnline(bool state) { 
   isOnline = state; 
+}
+
+void KiLL::setPower(float value) { 
+  power = value; 
 }
 
 // ======= GETTERS =======
@@ -49,7 +53,6 @@ float KiLL::getTemperatureOut() {
 }
 
 float KiLL::getPower() { 
-  power = sensors.getPower();
   return power; 
 }
 

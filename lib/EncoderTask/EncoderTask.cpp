@@ -31,12 +31,13 @@ void EncoderTask::task(void* pvParameters) {
   bool longPressTriggered = false;
   bool warningTriggered = false;
   bool firstLoop = true;
-  long minTemp = 0;
-  long maxTemp = minTemp + 100;
 
   for (;;) {
     // ======== Lectura del encoder ========
-    long rawEncoder = self->encoder.getCount() / 2;  // tu encoder es half quad
+    long rawEncoder = self->encoder.getCount() / 2;
+
+    // Actualizar minTemp dinámicamente basado en tempIn + 2
+    long minTemp = (long)(self->state->getTemperatureIn() + 2);
 
     if (firstLoop) {
       encoderOffset = self->state->getTarget() - rawEncoder;
@@ -45,14 +46,9 @@ void EncoderTask::task(void* pvParameters) {
 
     long newValue = rawEncoder + encoderOffset;    
 
-    if (newValue < minTemp) {
-      newValue = minTemp;
-      encoderOffset = newValue - rawEncoder;
-    }
-    if (newValue > maxTemp) {
-      newValue = maxTemp;
-      encoderOffset = newValue - rawEncoder;
-    }
+    // Aplicar límites de temperatura
+    newValue = constrain(newValue, 0, MAX_TEMP); // TODO: minTemp
+    encoderOffset = newValue - rawEncoder;
 
     // Actualizar valor si cambió
     if (newValue != lastEncoderValue) {

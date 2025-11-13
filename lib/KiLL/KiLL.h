@@ -28,7 +28,8 @@ public:
     // ======= SETTERS =======
     void setTarget(int value);
     void setOn(bool state);
-    void setOnline(bool state);      
+    void setOnline(bool state);
+    void setPower(float value);      
     void toggleOn();         
 
     // ======= GETTERS =======

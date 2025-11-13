@@ -6,6 +6,7 @@
 #include <Adafruit_ADS1X15.h>
 #include <FlowSensor.h>
 #include <EmonLib.h> 
+#include "I2CBus.h"
 
 class Sensors {
 private:
@@ -30,6 +31,9 @@ private:
 
   float adcToVoltage(int16_t raw);
   float readThermistor(int channel);
+  float readThermistorFiltered(int channel);
+  float lastValidTempIn;
+  float lastValidTempOut;
 
 public:
   Sensors();

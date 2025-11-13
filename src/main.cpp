@@ -2,6 +2,7 @@
 #include "KiLL.h"
 #include "EncoderTask.h"
 #include "MqttController.h"
+#include "PowerControl.h"
 
 #define ZC_PIN     26
 #define TRIAC_PIN  25
@@ -18,6 +19,7 @@ hw_timer_t *timer = NULL;
 KiLL systemState;
 EncoderTask encoder(&systemState);
 MQTTController mqtt(&systemState);
+// PowerControl powerControl(&systemState);
 
 void IRAM_ATTR fireTriac() {
   digitalWrite(TRIAC_PIN, HIGH);
@@ -33,6 +35,7 @@ void setup() {
   Serial.begin(115200);
   systemState.begin();
   encoder.begin();
+  // powerControl.begin();  // Iniciar el controlador PID
   mqtt.begin();
   mqtt.connectGlobal("INFINITUM0453_2.4", "7WNr3uRwH4");
 
@@ -55,19 +58,19 @@ void loop() {
   portEXIT_CRITICAL(&mux);
 
   // Si no hay flujo de agua o el calentador no está encendido, se desactiva el triac
-  float waterFlow = systemState.getWaterFlow();
-  bool isOn = systemState.getOn();
-  if (waterFlow < 3.0 || !isOn) {
-    timerAlarmDisable(timer);
-    digitalWrite(TRIAC_PIN, LOW);
-    return;
-  }
+  // float waterFlow = systemState.getWaterFlow();
+  // bool isOn = systemState.getOn();
+  // if (waterFlow < 3.0 || !isOn) {
+  //   timerAlarmDisable(timer);
+  //   digitalWrite(TRIAC_PIN, LOW);
+  //   return;
+  // }
 
-  int target = systemState.getTarget();
+  // double pidPower = powerControl.getPowerOutput();
+  // int firingDelay = map((int)pidPower, 0, 100, MAX_DELAY, MIN_DELAY);
+  int firingDelay = map(systemState.getTarget(), 0, EncoderTask::MAX_TEMP, MAX_DELAY, MIN_DELAY);
 
-  int firingDelay = map(target, 0, 100, MAX_DELAY, MIN_DELAY);
-
-    timerAlarmWrite(timer, firingDelay, false);
-    timerAlarmEnable(timer);
-    timerRestart(timer);
+  timerAlarmWrite(timer, firingDelay, false);
+  timerAlarmEnable(timer);
+  timerRestart(timer);
 }

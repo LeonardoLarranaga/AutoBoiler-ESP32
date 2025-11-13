@@ -1,5 +1,6 @@
 #include "Display.h"
 #include <Arduino.h>
+#include "I2CBus.h"
 
 OLEDDisplay::OLEDDisplay(): 
     sda(19), 
@@ -8,7 +9,9 @@ OLEDDisplay::OLEDDisplay():
     display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1) {}
 
 void OLEDDisplay::begin() {
+    xSemaphoreTake(getI2CMutex(), portMAX_DELAY);
     Wire.begin(sda, scl);
+    Wire.setClock(400000);
 
     if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
         Serial.println("❌ Error al iniciar pantalla OLED");
@@ -20,6 +23,7 @@ void OLEDDisplay::begin() {
     display.setCursor(10, 25);
     display.print("Iniciando...");
     display.display();
+    xSemaphoreGive(getI2CMutex());
 }
 
 // Mostrar
@@ -31,7 +35,9 @@ void OLEDDisplay::showStatusOffline(const char* left) {
     display.setCursor(0, 2);
     display.print(left);
     
+    xSemaphoreTake(getI2CMutex(), portMAX_DELAY);
     display.display();
+    xSemaphoreGive(getI2CMutex());
 }
 
 void OLEDDisplay::showStatusOnline(int wifiStrength, const char* date, const char* time) {
@@ -71,7 +77,9 @@ void OLEDDisplay::showStatusOnline(int wifiStrength, const char* date, const cha
     display.print(dateBuffer);
 
 
+    xSemaphoreTake(getI2CMutex(), portMAX_DELAY);
     display.display();
+    xSemaphoreGive(getI2CMutex());
 }
 
 void OLEDDisplay::showCurrentTemperature(float current) {
@@ -96,7 +104,9 @@ void OLEDDisplay::showCurrentTemperature(float current) {
     // Dibujamos
     display.setCursor(x, y);
     display.print(buffer);
+    xSemaphoreTake(getI2CMutex(), portMAX_DELAY);
     display.display();
+    xSemaphoreGive(getI2CMutex());
 }
 
 void OLEDDisplay::showTargetTemperature(int target) {
@@ -112,17 +122,23 @@ void OLEDDisplay::showTargetTemperature(int target) {
 
     display.setCursor(x, y);
     display.print(buffer);
+    xSemaphoreTake(getI2CMutex(), portMAX_DELAY);
     display.display();
+    xSemaphoreGive(getI2CMutex());
 }
 
 
 //Display control
 void OLEDDisplay::displayOff() { 
+    xSemaphoreTake(getI2CMutex(), portMAX_DELAY);
     display.ssd1306_command(SSD1306_DISPLAYOFF); 
+    xSemaphoreGive(getI2CMutex());
 }
 
 void OLEDDisplay::displayOn() { 
+    xSemaphoreTake(getI2CMutex(), portMAX_DELAY);
     display.ssd1306_command(SSD1306_DISPLAYON); 
+    xSemaphoreGive(getI2CMutex());
 }
 
 void OLEDDisplay::clearDisplay() { 
@@ -143,7 +159,9 @@ void OLEDDisplay::results(const char* label) {
 
     display.setCursor(x, y);
     display.print(label);
+    xSemaphoreTake(getI2CMutex(), portMAX_DELAY);
     display.display();
+    xSemaphoreGive(getI2CMutex());
 }
 
 void OLEDDisplay::onConnecting(const char* message) {
@@ -163,7 +181,9 @@ void OLEDDisplay::onConnecting(const char* message) {
 
         int radius = 8 + abs(6 - (step % 12));
         display.drawCircle(centerX, centerY, radius, SSD1306_WHITE);
+        xSemaphoreTake(getI2CMutex(), portMAX_DELAY);
         display.display();
+        xSemaphoreGive(getI2CMutex());
         delay(70);
     }
 }
@@ -206,7 +226,9 @@ void OLEDDisplay::message(const char* title, const char* text) {
         startPos = endPos + 1;
     }
 
+    xSemaphoreTake(getI2CMutex(), portMAX_DELAY);
     display.display();
+    xSemaphoreGive(getI2CMutex());
 }
 
 void OLEDDisplay::showStartupAnimation() {
@@ -216,7 +238,9 @@ void OLEDDisplay::showStartupAnimation() {
     for (int r = 0; r < 30; r += 2) {
         display.clearDisplay();
         display.drawCircle(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, r, SSD1306_WHITE);
+        xSemaphoreTake(getI2CMutex(), portMAX_DELAY);
         display.display();
+        xSemaphoreGive(getI2CMutex());
         delay(40);
     }
 
@@ -224,7 +248,9 @@ void OLEDDisplay::showStartupAnimation() {
     for (int r = 30; r > 10; r -= 2) {
         display.clearDisplay();
         display.drawCircle(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, r, SSD1306_WHITE);
+        xSemaphoreTake(getI2CMutex(), portMAX_DELAY);
         display.display();
+        xSemaphoreGive(getI2CMutex());
         delay(25);
     }
 
@@ -235,7 +261,9 @@ void OLEDDisplay::showStartupAnimation() {
         display.setTextSize(1);
         display.setCursor((SCREEN_WIDTH - (i * 6)) / 2, SCREEN_HEIGHT / 2 - 5);
         for (int j = 0; j < i; j++) display.print(msg[j]);
+        xSemaphoreTake(getI2CMutex(), portMAX_DELAY);
         display.display();
+        xSemaphoreGive(getI2CMutex());
         delay(100);
     }
 

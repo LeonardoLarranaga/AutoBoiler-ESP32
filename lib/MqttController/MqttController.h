@@ -36,15 +36,14 @@ private:
     TaskHandle_t mqttTaskHandle;
     TaskHandle_t brokerTaskHandle;
 
-    String baseTopic;
+    String baseCommandTopic;
+    String topicUpdates;
     String topicTarget;
-    String topicPower;
-    String topicWaterFlow;
-    String topicTempIn;
-    String topicTempOut;
     String topicIsOn;
 
     String topicTasteWifi;
     String topicSaveCredentials;
     String topicConfirm;
+
+    void publishCombined(bool server, bool retain);
 };

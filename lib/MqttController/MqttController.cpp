@@ -5,16 +5,14 @@
 MQTTController::MQTTController(KiLL* sys) : client(espClient), system(sys){}
 
 void MQTTController::begin() {
-    baseTopic = "kill/boiler_" + system->getBoilerId(); 
-    topicTarget = baseTopic + "/target";
-    topicPower = baseTopic + "/power";
-    topicWaterFlow = baseTopic + "/flow";
-    topicTempIn = baseTopic + "/tempIn";
-    topicTempOut = baseTopic + "/tempOut";
-    topicIsOn = baseTopic + "/powerState";
-    topicTasteWifi = baseTopic + "/tasteWifi";
-    topicSaveCredentials = baseTopic + "/saveCredentials";
-    topicConfirm = baseTopic + "/confirm";
+    topicUpdates = "kill/updates/" + system->getBoilerId();
+
+    baseCommandTopic = "kill/commands/" + system->getBoilerId(); 
+    topicTarget          = baseCommandTopic + "/target";
+    topicIsOn            = baseCommandTopic + "/powerState";
+    topicTasteWifi       = baseCommandTopic + "/tasteWifi";
+    topicSaveCredentials = baseCommandTopic + "/saveCredentials";
+    topicConfirm         = baseCommandTopic + "/confirm";
 }
 
 void MQTTController::connectGlobal(const char* ssid, const char* password) {
@@ -22,7 +20,7 @@ void MQTTController::connectGlobal(const char* ssid, const char* password) {
     WiFi.begin(ssid, password);
     
     unsigned long start = millis();
-
+    Serial.println("Conectando a WiFi global");
     while (WiFi.status() != WL_CONNECTED && millis() - start < 10000) {
         system->onConnecting("Conectando WiFi");
     }
@@ -33,6 +31,7 @@ void MQTTController::connectGlobal(const char* ssid, const char* password) {
     } else {
         system->results("No conectado");
         delay(1000);
+        Serial.println("No conectado, conectando local");
         connectLocal();
         return;
     }
@@ -67,7 +66,12 @@ void MQTTController::connectGlobal(const char* ssid, const char* password) {
 void MQTTController::connectLocal() {
 
     WiFi.mode(WIFI_AP_STA);
+    IPAddress localIp(192, 168, 39, 12);
+    IPAddress gateway(192, 168, 39, 12);
+    IPAddress subnet(255, 255, 255, 0);
+    WiFi.softAPConfig(localIp, gateway, subnet);
     WiFi.softAP("KiLL-" + system->getBoilerId(), "12345678");
+    
          
     broker.subscribe("#", [this](const char* topic, const char* payload) {
         this->callback((char*)topic, (byte*)payload, strlen(payload));
@@ -131,7 +135,8 @@ void MQTTController::callback(char* topic, byte* payload, unsigned int length) {
 
         http.end();
     }
-    else if (topicStr == topicTarget){
+    else if (topicStr == topicTarget) {
+        Serial.println("Target: " + msg);
         system->setTarget(msg.toInt());
     }
     else if (topicStr == topicIsOn) {
@@ -169,10 +174,7 @@ void MQTTController::brokerTask(void* pvParameters) {
         unsigned long now = millis();
         if (now - lastPublish >= 3000) {
             lastPublish = now;
-            self->publishFloat(self->topicTempOut, self->system->getTemperatureOut(), false, false);
-            self->publishFloat(self->topicTempIn, self->system->getTemperatureIn(), false, false);
-            self->publishFloat(self->topicPower, self->system->getPower(), false, false);
-            self->publishFloat(self->topicWaterFlow, self->system->getWaterFlow(), false, false);
+            self->publishCombined(false, false);
             self->publishFloat(self->topicTarget, self->system->getTarget(), false, true);
             if(self->system->getOn())
                 self->publishFloat(self->topicIsOn, 1, false, true);
@@ -193,11 +195,7 @@ void MQTTController::mqttTask(void* pvParameters) {
 
         unsigned long now = millis();
         if (now - lastPublish >= 3000) {
-           
-            self->publishFloat(self->topicTempOut, self->system->getTemperatureOut(), true, false);
-            self->publishFloat(self->topicTempIn, self->system->getTemperatureIn(), true, false);
-            self->publishFloat(self->topicPower, self->system->getPower(), true, false);
-            self->publishFloat(self->topicWaterFlow, self->system->getWaterFlow(), true, false);
+            self->publishCombined(true, false);
             self->publishFloat(self->topicTarget, self->system->getTarget(), true, true);
 
             if (self->system->getOn()) {
@@ -229,6 +227,17 @@ void MQTTController::publishInt(const String& topic, int value, bool server, boo
     else broker.publish(topic.c_str(), buffer, retain);
 }
 
+void MQTTController::publishCombined(bool server, bool retain) {
+    // Formato: power,flow,tempOut,tempin con 2 decimales
+    float power = system->getPower();
+    float flow = system->getWaterFlow();
+    float tempOut = system->getTemperatureOut();
+    float tempIn = system->getTemperatureIn();
+    float target = system->getTarget();
 
+    char buffer[64];
+    snprintf(buffer, sizeof(buffer), "%.2f,%.2f,%.2f,%.2f,%.2f", power, flow, tempOut, tempIn, target);
 
-
+    if (server) client.publish(topicUpdates.c_str(), buffer, retain);
+    else broker.publish(topicUpdates.c_str(), buffer, retain);
+}
