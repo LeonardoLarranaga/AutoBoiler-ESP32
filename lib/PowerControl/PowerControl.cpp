@@ -7,7 +7,7 @@ PowerControl::PowerControl(KiLL* sys)
       setpoint(0),
       outputMux(portMUX_INITIALIZER_UNLOCKED) {
     
-    pid = new PID(&input, &output, &setpoint, 2.0, 0.5, 1.0, DIRECT);
+    pid = new PID(&input, &output, &setpoint, 1.5, 0.5, 1.0, DIRECT);
     
     // Configurar límites de salida (0-100%)
     pid->SetOutputLimits(0, 100);
@@ -23,11 +23,11 @@ void PowerControl::begin() {
     xTaskCreatePinnedToCore(
         pidTask,
         "PIDTask",
-        4096,
+        8192,
         this,
         2,
         &pidTaskHandle,
-        0
+        1
     );
 }
 
@@ -42,12 +42,11 @@ void PowerControl::pidTask(void* pvParameters) {
             // Actualizar valores del PID
             self->input = self->system->getTemperatureOut();
             self->setpoint = self->system->getTarget();
-            
+
             // Ejecutar el cálculo del PID
             self->pid->Compute();
+            Serial.printf("%.2f\n", self->output);
             
-            // Actualizar el valor de potencia en el sistema
-            self->system->setPower(self->output);
         } else {
             portENTER_CRITICAL(&self->outputMux);
             self->output = 0;

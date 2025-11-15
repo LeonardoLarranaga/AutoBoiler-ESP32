@@ -20,6 +20,9 @@ private:
     String boilerId;
     Sensors sensors;
     OLEDDisplay display;
+    TaskHandle_t displayUpdateTaskHandle = nullptr;
+
+    static void displayUpdateTask(void* pvParameters);
 
 public:
     KiLL();

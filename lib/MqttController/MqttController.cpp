@@ -60,7 +60,15 @@ void MQTTController::connectGlobal(const char* ssid, const char* password) {
         system->started();
     } 
 
-    xTaskCreatePinnedToCore(mqttTask, "MqttTask", 8192, this, 1, &mqttTaskHandle, 0);    
+    xTaskCreatePinnedToCore(
+        mqttTask, 
+        "MqttTask", 
+        8192, 
+        this, 
+        1, 
+        &mqttTaskHandle, 
+        0
+    );    
 }
 
 void MQTTController::connectLocal() {
@@ -136,7 +144,6 @@ void MQTTController::callback(char* topic, byte* payload, unsigned int length) {
         http.end();
     }
     else if (topicStr == topicTarget) {
-        Serial.println("Target: " + msg);
         system->setTarget(msg.toInt());
     }
     else if (topicStr == topicIsOn) {
@@ -178,8 +185,6 @@ void MQTTController::runTaskLoop(bool isServer) {
         if (now - lastPublish >= 3000) {
             lastPublish = now;
             publishCombined(isServer, false);
-            publishFloat(topicTarget, system->getTarget(), isServer, true);
-            
             if (system->getOn()) {
                 publishInt(topicIsOn, isServer ? 0 : 1, isServer, true);
             } else {
