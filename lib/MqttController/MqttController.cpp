@@ -203,11 +203,11 @@ void MQTTController::callback(char* topic, byte* payload, unsigned int length) {
         system->setTarget(msg.toInt());
     } else if (topicStr == topicIsOn) {
        
-        float value = msg.toFloat();
+        float value = msg.toInt();
 
-        if (value == 0.0f) {
+        if (value == 1) {
             system->setOn(true);
-        }  else if (value == 1.0f) {
+        }  else if (value == 0) {
             system->setOn(false);
         }
     }
