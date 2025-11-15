@@ -17,13 +17,15 @@ private:
     Adafruit_SSD1306 display;
     TaskHandle_t wifiClockTaskHandle;
 
+    void showCurrentTemperature(float current);   
+    void showTargetTemperature(int target);    
+
 public:
     OLEDDisplay();
     void begin();
 
     // Mostrar
-    void showCurrentTemperature(float current);   
-    void showTargetTemperature(int target);    
+    void showTemperatures(float current, int target);
     void showStatusOnline(int wifiStrength, const char* date, const char* time);
     void showStatusOffline(const char* left);
 

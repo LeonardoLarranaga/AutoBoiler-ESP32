@@ -223,6 +223,8 @@ void MQTTController::publishInt(const String& topic, int value, bool server, boo
 }
 
 void MQTTController::publishCombined(bool server, bool retain) {
+    system->updateDisplayTemperatures();
+
     float power = system->getPower();
     float flow = system->getWaterFlow();
     float tempOut = system->getTemperatureOut();

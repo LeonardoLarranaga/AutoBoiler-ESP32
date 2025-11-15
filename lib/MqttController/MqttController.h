@@ -26,6 +26,7 @@ private:
     bool postAddBoiler(const char* token, const char* killId, const char* name);
     bool connectToWifiTemp(const char* ssid, const char* password, unsigned long timeout);
     void callback(char* topic, byte* payload, unsigned int length);
+    void publishCombined(bool server, bool retain);
     
     WiFiClient espClient;
     PubSubClient client;
@@ -44,6 +45,4 @@ private:
     String topicTasteWifi;
     String topicSaveCredentials;
     String topicConfirm;
-
-    void publishCombined(bool server, bool retain);
 };

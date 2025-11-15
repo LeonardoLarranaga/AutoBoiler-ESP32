@@ -11,7 +11,6 @@ KiLL::KiLL() :
 // MARK: SETTERS
 void KiLL::setTarget(int value) { 
   target = value; 
-  display.showTargetTemperature(value);
 }
 
 void KiLL::toggleOn() { 
@@ -48,7 +47,6 @@ float KiLL::getTemperatureIn() {
 
 float KiLL::getTemperatureOut() { 
   temperatureOut = sensors.getTempOut();
-  display.showCurrentTemperature(temperatureOut);
   return temperatureOut; 
 }
 
@@ -86,11 +84,14 @@ void KiLL::onAdvice() {
 
 void KiLL::started() {
   display.showStartupAnimation();
-  display.showCurrentTemperature(temperatureIn);
-  display.showTargetTemperature(target);
+  display.showTemperatures(temperatureIn, target);
   if(isOnline) {
     display.startAutoStatus();
   } else {
     display.showStatusOffline(("KiLL-" + boilerId).c_str());
   }
+}
+
+void KiLL::updateDisplayTemperatures() {
+  display.showTemperatures(temperatureOut, target);
 }

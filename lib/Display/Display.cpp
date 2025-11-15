@@ -9,7 +9,7 @@ OLEDDisplay::OLEDDisplay():
 void OLEDDisplay::begin() {
     xSemaphoreTake(getI2CMutex(), portMAX_DELAY);
     Wire.begin(sda, scl);
-    Wire.setClock(100000);  // Reducido a 100kHz para mayor robustez contra EMI del TRIAC
+    Wire.setClock(50000);
 
     if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
         Serial.println("❌ Error al iniciar pantalla OLED");
@@ -81,11 +81,6 @@ void OLEDDisplay::showStatusOnline(int wifiStrength, const char* date, const cha
 }
 
 void OLEDDisplay::showCurrentTemperature(float current) {
-    static unsigned long lastUpdate = 0;
-    unsigned long now = millis();
-    if (now - lastUpdate < 1000) return;
-    lastUpdate = now;
-
     display.fillRect(0, 15, SCREEN_WIDTH, 40, SSD1306_BLACK);
     display.setTextSize(2);
 
@@ -130,6 +125,10 @@ void OLEDDisplay::showTargetTemperature(int target) {
     xSemaphoreGive(getI2CMutex());
 }
 
+void OLEDDisplay::showTemperatures(float current, int target) {
+    showCurrentTemperature(current);
+    showTargetTemperature(target);
+}
 
 //Display control
 void OLEDDisplay::displayOff() { 
