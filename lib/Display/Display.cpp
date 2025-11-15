@@ -12,7 +12,7 @@ void OLEDDisplay::begin() {
     Wire.setClock(50000);
 
     if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-        Serial.println("❌ Error al iniciar pantalla OLED");
+        Serial.println("Error al iniciar pantalla OLED");
         while (true);
     }
     display.clearDisplay();
@@ -21,6 +21,7 @@ void OLEDDisplay::begin() {
     display.setCursor(10, 25);
     display.print("Iniciando...");
     display.display();
+    delay(500);
     xSemaphoreGive(getI2CMutex());
 }
 
@@ -28,9 +29,13 @@ void OLEDDisplay::begin() {
 void OLEDDisplay::showStatusOffline(const char* left) {
     display.fillRect(0, 0, SCREEN_WIDTH, 12, SSD1306_BLACK);
 
-    //Texto wifi
-    display.setTextSize(1);         
-    display.setCursor(0, 2);
+    // Texto wifi centrado
+    display.setTextSize(2);
+    int16_t x1, y1;
+    uint16_t w, h;
+    display.getTextBounds(left, 0, 0, &x1, &y1, &w, &h);
+    int textX = (SCREEN_WIDTH - w) / 2;
+    display.setCursor(textX, 2);
     display.print(left);
     
     xSemaphoreTake(getI2CMutex(), portMAX_DELAY);
@@ -126,6 +131,7 @@ void OLEDDisplay::showTargetTemperature(int target) {
 }
 
 void OLEDDisplay::showTemperatures(float current, int target) {
+    if (!Memory::verifyContent()) return;
     showCurrentTemperature(current);
     showTargetTemperature(target);
 }
@@ -286,7 +292,15 @@ void OLEDDisplay::startAutoStatus() {
 
         for (;;) {
             if (WiFi.status() != WL_CONNECTED) {
-                self->showStatusOffline("WiFi");
+                // Si no hay WiFi en memoria, mostrar "WiFi: KiLL-getboilerid"
+                if (!Memory::verifyContent()) {
+
+                    String boilerId = Memory::getBoilerId();
+                    String wifiMessage = "KiLL-" + boilerId;
+                    self->message("WiFi", wifiMessage.c_str());
+                } else {
+                    self->showStatusOffline("WiFi...");
+                }
                 vTaskDelay(pdMS_TO_TICKS(10000)); 
                 continue;
             }

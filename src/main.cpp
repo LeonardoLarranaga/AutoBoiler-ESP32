@@ -33,11 +33,14 @@ void IRAM_ATTR onZeroCross() {
 
 void setup() {
   Serial.begin(115200);
+  Serial.println("Iniciando sistema...");
   systemState.begin();
   encoder.begin();
   powerControl.begin();  // Iniciar el controlador PID
   mqtt.begin();
-  mqtt.connectGlobal("INFINITUM0453_2.4", "7WNr3uRwH4");
+ 
+  if (Memory::verifyContent()) mqtt.connectGlobal();
+  else mqtt.connectLocal();
 
   pinMode(ZC_PIN, INPUT);
   pinMode(TRIAC_PIN, OUTPUT);

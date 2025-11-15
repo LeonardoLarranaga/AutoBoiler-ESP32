@@ -14,7 +14,7 @@ public:
     MQTTController(KiLL* sys);
 
     void begin();
-    void connectGlobal(const char* ssid, const char* password);
+    void connectGlobal();
     void connectLocal();   
 
 private:

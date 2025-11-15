@@ -10,10 +10,12 @@ KiLL::KiLL() :
 
 // MARK: SETTERS
 void KiLL::setTarget(int value) { 
+  if (!Memory::verifyContent()) return;
   target = value; 
 }
 
 void KiLL::toggleOn() { 
+  if (!Memory::verifyContent()) return;
   isOn = !isOn; 
   if (isOn) display.displayOn(); else display.displayOff();
 }
@@ -54,11 +56,10 @@ float KiLL::getPower() {
   return power; 
 }
 
-void KiLL::begin(){
+void KiLL::begin() {
   Memory::initialize();
-  Memory::clear();
+  
   Memory::writeBoilerId("3912");
-  Memory::write("IZZI-D64E", "DCA63395D64E");
 
   boilerId = Memory::getBoilerId();
 

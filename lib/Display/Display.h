@@ -7,6 +7,7 @@
 #include "time.h"
 #include <WiFi.h>
 #include "I2CBus.h"
+#include "Memory.h"
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64

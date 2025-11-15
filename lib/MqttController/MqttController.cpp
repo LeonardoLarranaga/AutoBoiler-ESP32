@@ -15,9 +15,10 @@ void MQTTController::begin() {
     topicConfirm         = baseCommandTopic + "/confirm";
 }
 
-void MQTTController::connectGlobal(const char* ssid, const char* password) {
+void MQTTController::connectGlobal() {
+
     WiFi.mode(WIFI_AP_STA);
-    WiFi.begin(ssid, password);
+    WiFi.begin(Memory::getSSID().c_str(), Memory::getPassword().c_str());
     
     unsigned long start = millis();
     Serial.println("Conectando a WiFi global");
@@ -122,7 +123,7 @@ void MQTTController::callback(char* topic, byte* payload, unsigned int length) {
         const char* name = doc["name"];
         const char* token = doc["token"];
 
-        connectGlobal(ssid, password);
+        connectGlobal();
 
         HTTPClient http;
         http.begin("http://170.9.22.130:3000/app/kill/add");
@@ -185,11 +186,6 @@ void MQTTController::runTaskLoop(bool isServer) {
         if (now - lastPublish >= 3000) {
             lastPublish = now;
             publishCombined(isServer, false);
-            if (system->getOn()) {
-                publishInt(topicIsOn, isServer ? 0 : 1, isServer, true);
-            } else {
-                publishInt(topicIsOn, isServer ? 1 : 0, isServer, true);
-            }
         }
 
         vTaskDelay(10 / portTICK_PERIOD_MS);
@@ -223,6 +219,7 @@ void MQTTController::publishInt(const String& topic, int value, bool server, boo
 }
 
 void MQTTController::publishCombined(bool server, bool retain) {
+    if (!Memory::verifyContent()) return;
     system->updateDisplayTemperatures();
 
     float power = system->getPower();
@@ -236,4 +233,10 @@ void MQTTController::publishCombined(bool server, bool retain) {
 
     if (server) client.publish(topicUpdates.c_str(), buffer, retain);
     else broker.publish(topicUpdates.c_str(), buffer, retain);
+
+    if (system->getOn()) {
+        publishInt(topicIsOn, server ? 1 : 0, server, true);
+    } else {
+        publishInt(topicIsOn, server ? 0 : 1, server, true);
+    }
 }
