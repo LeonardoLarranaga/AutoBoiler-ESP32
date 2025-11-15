@@ -77,6 +77,9 @@ void KiLL::results(String label) {
 
 void KiLL::onRestarted() {
   display.message("Reiniciado", "Todas las configuraciones fueron borradas");
+  delay(1000);
+  Memory::clear();
+  ESP.restart();
 }
 
 void KiLL::onAdvice() {
