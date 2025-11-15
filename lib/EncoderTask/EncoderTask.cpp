@@ -42,18 +42,20 @@ void EncoderTask::task(void* pvParameters) {
     if (firstLoop) {
       encoderOffset = self->state->getTarget() - rawEncoder;
       firstLoop = false;
+      self->state->setTarget(self->state->getTemperatureIn());
     }
 
     long newValue = rawEncoder + encoderOffset;    
 
     // Aplicar límites de temperatura
-    newValue = constrain(newValue, 0, MAX_TEMP); // TODO: minTemp
+    newValue = constrain(newValue, minTemp, MAX_TEMP);
     encoderOffset = newValue - rawEncoder;
 
     // Actualizar valor si cambió
     if (newValue != lastEncoderValue) {
       lastEncoderValue = newValue;
       self->state->setTarget(newValue);
+      self->state->updateDisplayTemperatures();
     }
 
     // Lectura del botón

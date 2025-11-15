@@ -11,6 +11,7 @@ KiLL::KiLL() :
 // MARK: SETTERS
 void KiLL::setTarget(int value) { 
   if (!Memory::verifyContent()) return;
+  if (value < static_cast<int>(getTemperatureIn())) return;
   target = value; 
 }
 

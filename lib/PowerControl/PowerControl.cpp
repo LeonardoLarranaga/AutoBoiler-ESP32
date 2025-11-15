@@ -37,31 +37,36 @@ void PowerControl::pidTask(void* pvParameters) {
     for (;;) {
         float waterFlow = self->system->getWaterFlow();
         bool isOn = self->system->getOn();
-        
-        if (waterFlow >= 3.0 && isOn) {
-            // Actualizar valores del PID
-            self->input = self->system->getTemperatureOut();
-            self->setpoint = self->system->getTarget();
+        int minTemp = static_cast<int>(self->system->getTemperatureIn() + 2);
 
-            // Ejecutar el cálculo del PID
-            self->pid->Compute();
-            long now = millis();
-            int output = self->output;
-            int target = self->setpoint;
-            float tempOut = self->input;
-            float tempIn = self->system->getTemperatureIn();
-            float waterFlow = self->system->getWaterFlow();
-            Serial.printf("%ld,%d,%d,%f,%f,%f\n", now, output, target, tempOut, tempIn, waterFlow);
-        } else {
+        self->setpoint = self->system->getTarget();
+
+        if (!isOn || waterFlow < 3.0 || self->setpoint < minTemp + 2) {
             portENTER_CRITICAL(&self->outputMux);
             self->output = 0;
             portEXIT_CRITICAL(&self->outputMux);
-            
+
             self->system->setPower(0);
-            
+
             // Reiniciar el PID para evitar windup del integrador
             self->pid->Initialize();
+
+            vTaskDelay(pdMS_TO_TICKS(50));
+            continue;
         }
+        
+
+        // Actualizar valores del PID
+        self->input = self->system->getTemperatureOut();
+
+        // Ejecutar el cálculo del PID
+        self->pid->Compute();
+        long now = millis();
+        int output = self->output;
+        int target = self->setpoint;
+        float tempOut = self->input;
+        float tempIn = self->system->getTemperatureIn();
+        Serial.printf("%ld,%d,%d,%f,%f,%f\n", now, output, target, tempOut, tempIn, waterFlow);
         
         // Ejecutar cada 50ms para respuesta rápida
         vTaskDelay(pdMS_TO_TICKS(50));
