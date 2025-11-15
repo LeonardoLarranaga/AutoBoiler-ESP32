@@ -263,7 +263,9 @@ void MQTTController::publishString(const String& topic, const String& value) {
 }
 
 void MQTTController::publishCombined() {
-    if (!Memory::verifyContent()) return;
+    int isOn = system->getOn();
+
+    if (!Memory::verifyContent() || !isOn) return;
     system->updateDisplayTemperatures();
 
     float power = system->getPower();
@@ -271,7 +273,7 @@ void MQTTController::publishCombined() {
     float tempOut = system->getTemperatureOut();
     float tempIn = system->getTemperatureIn();
     int target = system->getTarget();
-    int isOn = system->getOn();
+    
 
     char buffer[64];
     snprintf(buffer, sizeof(buffer), "%.2f,%.2f,%.2f,%.2f,%d,%d", power, flow, tempOut, tempIn, target, isOn);
