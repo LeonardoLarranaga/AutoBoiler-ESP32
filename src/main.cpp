@@ -36,10 +36,10 @@ void setup() {
   Serial.println("Iniciando sistema...");
   systemState.begin();
   encoder.begin();
-  powerControl.begin();  // Iniciar el controlador PID
+  powerControl.begin();
   mqtt.begin();
  
-  if (Memory::verifyContent()) mqtt.connectGlobal();
+  if (Memory::verifyContent()) mqtt.connectGlobal(Memory::getSSID().c_str(), Memory::getPassword().c_str());
   else mqtt.connectLocal();
 
   pinMode(ZC_PIN, INPUT);

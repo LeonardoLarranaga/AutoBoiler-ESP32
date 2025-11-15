@@ -14,19 +14,19 @@ public:
     MQTTController(KiLL* sys);
 
     void begin();
-    void connectGlobal();
+    void connectGlobal(const char* ssid, const char* password);
     void connectLocal();   
 
 private:
-    void runTaskLoop(bool isServer);
-    static void brokerTask(void* pvParameters);
-    static void mqttTask(void* pvParameters);
-    void publishFloat(const String& topic, float value, bool server, bool retain);
-    void publishInt(const String& topic, int value, bool server, bool retain);
+    void runTaskLoop();
+    void publishFloat(const String& topic, float value);
+    void publishInt(const String& topic, int value);
+    void publishString(const String& topic, const String& value);
     bool postAddBoiler(const char* token, const char* killId, const char* name);
     bool connectToWifiTemp(const char* ssid, const char* password, unsigned long timeout);
     void callback(char* topic, byte* payload, unsigned int length);
-    void publishCombined(bool server, bool retain);
+    void publishCombined();
+
     
     WiFiClient espClient;
     PubSubClient client;
@@ -42,7 +42,8 @@ private:
     String topicTarget;
     String topicIsOn;
 
-    String topicTasteWifi;
+    String topicTestWifi;
     String topicSaveCredentials;
     String topicConfirm;
+    String topicEspId;
 };

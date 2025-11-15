@@ -6,19 +6,32 @@ MQTTController::MQTTController(KiLL* sys) : client(espClient), system(sys){}
 
 void MQTTController::begin() {
     topicUpdates = "kill/updates/" + system->getBoilerId();
-
     baseCommandTopic = "kill/commands/" + system->getBoilerId(); 
+
     topicTarget          = baseCommandTopic + "/target";
     topicIsOn            = baseCommandTopic + "/powerState";
-    topicTasteWifi       = baseCommandTopic + "/tasteWifi";
+    topicTestWifi        = baseCommandTopic + "/testWifi";
     topicSaveCredentials = baseCommandTopic + "/saveCredentials";
     topicConfirm         = baseCommandTopic + "/confirm";
+    topicEspId           = "kill/espId";
 }
 
-void MQTTController::connectGlobal() {
-
+void MQTTController::connectGlobal(const char* ssid, const char* password) {
     WiFi.mode(WIFI_AP_STA);
-    WiFi.begin(Memory::getSSID().c_str(), Memory::getPassword().c_str());
+    WiFi.begin(ssid, password);
+    
+    // Setup local AP while connecting to global WiFi
+    IPAddress localIp(192, 168, 39, 12);
+    IPAddress gateway(192, 168, 39, 12);
+    IPAddress subnet(255, 255, 255, 0);
+    WiFi.softAPConfig(localIp, gateway, subnet);
+    WiFi.softAP("KiLL-" + system->getBoilerId(), "12345678");
+    
+    // Setup local broker
+    broker.subscribe("#", [this](const char* topic, const char* payload) {
+        this->callback((char*)topic, (byte*)payload, strlen(payload));
+    });
+    broker.begin();
     
     unsigned long start = millis();
     Serial.println("Conectando a WiFi global");
@@ -33,7 +46,19 @@ void MQTTController::connectGlobal() {
         system->results("No conectado");
         delay(1000);
         Serial.println("No conectado, conectando local");
-        connectLocal();
+        system->started();
+        xTaskCreatePinnedToCore(
+            [](void* param) {
+                MQTTController* self = static_cast<MQTTController*>(param);
+                self->runTaskLoop();
+            }, 
+            "BrokerTask", 
+            8192, 
+            this, 
+            1, 
+            &brokerTaskHandle, 
+            0
+        );
         return;
     }
 
@@ -62,7 +87,10 @@ void MQTTController::connectGlobal() {
     } 
 
     xTaskCreatePinnedToCore(
-        mqttTask, 
+        [](void* param) {
+            MQTTController* self = static_cast<MQTTController*>(param);
+            self->runTaskLoop();
+        }, 
         "MqttTask", 
         8192, 
         this, 
@@ -90,7 +118,18 @@ void MQTTController::connectLocal() {
 
     system->started();
 
-    xTaskCreatePinnedToCore(brokerTask, "BrokerTask", 8192, this, 1, &brokerTaskHandle, 0);
+    xTaskCreatePinnedToCore(
+        [](void* param) {
+            MQTTController* self = static_cast<MQTTController*>(param);
+            self->runTaskLoop();
+        }, 
+        "BrokerTask", 
+        8192, 
+        this, 
+        1, 
+        &brokerTaskHandle, 
+        0
+    );
 }
 
 void MQTTController::callback(char* topic, byte* payload, unsigned int length) {
@@ -98,8 +137,12 @@ void MQTTController::callback(char* topic, byte* payload, unsigned int length) {
     for (unsigned int i = 0; i < length; i++) msg += (char)payload[i];
 
     String topicStr = String(topic);
+    Serial.printf("topic: %s, msg: %s\n", topicStr.c_str(), msg.c_str());
 
-    if (topicStr == topicTasteWifi) {
+    if (topicStr == topicEspId) {
+        if (msg.toInt() == 1) publishString(topicEspId, system->getBoilerId());
+        broker.loop();
+    } else if (topicStr == topicTestWifi) {
         JsonDocument doc;
         DeserializationError error = deserializeJson(doc, msg);
       
@@ -107,10 +150,8 @@ void MQTTController::callback(char* topic, byte* payload, unsigned int length) {
         const char* password = doc["password"];
 
         bool connected = connectToWifiTemp(ssid, password, 10000);
-        publishFloat(topicConfirm, connected ? 0 : 1, false, false);
-        
-    }
-    else if (topicStr == topicSaveCredentials) {
+        publishInt(topicConfirm, connected ? 1 : 0);
+    } else if (topicStr == topicSaveCredentials) {
         JsonDocument doc;
         DeserializationError error = deserializeJson(doc, msg);
         if (error) {
@@ -123,10 +164,18 @@ void MQTTController::callback(char* topic, byte* payload, unsigned int length) {
         const char* name = doc["name"];
         const char* token = doc["token"];
 
-        connectGlobal();
+        connectGlobal(ssid, password);
+
+        if (WiFi.status() != WL_CONNECTED) {
+            delay(5000);
+            publishInt(topicConfirm, 0);
+            broker.loop();
+            delay(100);
+            return;
+        }
 
         HTTPClient http;
-        http.begin("http://170.9.22.130:3000/app/kill/add");
+        http.begin("http://170.9.22.130:3000/app/kill/create");
         http.addHeader("Content-Type", "application/json");
         String jsonData = "{";
         jsonData += "\"name\":\"" + String(name) + "\",";
@@ -135,26 +184,30 @@ void MQTTController::callback(char* topic, byte* payload, unsigned int length) {
 
         int httpResponseCode = http.POST(jsonData);
 
-        if (httpResponseCode > 0) {
-            publishFloat(topicConfirm, 0, false, false);
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+        if (httpResponseCode >= 200 && httpResponseCode < 300) {
+            publishInt(topicConfirm, 1);
+            broker.loop();
+            vTaskDelay(100 / portTICK_PERIOD_MS);
             Memory::write(String(ssid), String(password));
+            system->setOn(true);
         } else {
-            publishFloat(topicConfirm, 1, false, false);
+            publishInt(topicConfirm, 0);
+            broker.loop();
+            vTaskDelay(100 / portTICK_PERIOD_MS);
         }
 
         http.end();
-    }
-    else if (topicStr == topicTarget) {
+    } else if (topicStr == topicTarget) {
         system->setTarget(msg.toInt());
-    }
-    else if (topicStr == topicIsOn) {
+    } else if (topicStr == topicIsOn) {
        
         float value = msg.toFloat();
 
         if (value == 0.0f) {
             system->setOn(true);
-        } 
-        else if (value == 1.0f) {
+        }  else if (value == 1.0f) {
             system->setOn(false);
         }
     }
@@ -172,53 +225,44 @@ bool MQTTController::connectToWifiTemp(const char* ssid, const char* password, u
     return WiFi.status() == WL_CONNECTED;
 }
 
-void MQTTController::runTaskLoop(bool isServer) {
+void MQTTController::runTaskLoop() {
     unsigned long lastPublish = 0;
 
     for (;;) {
-        if (isServer) {
-            client.loop();
-        } else {
-            broker.loop();
-        }
+        client.loop();
+        broker.loop();
 
         unsigned long now = millis();
         if (now - lastPublish >= 3000) {
             lastPublish = now;
-            publishCombined(isServer, false);
+            publishCombined();
         }
 
         vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 }
 
-void MQTTController::brokerTask(void* pvParameters) {
-    MQTTController* self = static_cast<MQTTController*>(pvParameters);
-    self->runTaskLoop(false);
-}
-
-void MQTTController::mqttTask(void* pvParameters) {
-    MQTTController* self = static_cast<MQTTController*>(pvParameters);
-    self->runTaskLoop(true);
-}
-
-
-void MQTTController::publishFloat(const String& topic, float value, bool server, bool retain) {
+void MQTTController::publishFloat(const String& topic, float value) {
     char buffer[16];
     snprintf(buffer, sizeof(buffer), "%.2f", value);
-    if (server) client.publish(topic.c_str(), buffer, retain);
-    else broker.publish(topic.c_str(), buffer, retain);
+    client.publish(topic.c_str(), buffer, false);
+    broker.publish(topic.c_str(), buffer, false);
 }
 
-void MQTTController::publishInt(const String& topic, int value, bool server, bool retain) {
+void MQTTController::publishInt(const String& topic, int value) {
     char buffer[12]; 
     snprintf(buffer, sizeof(buffer), "%d", value);
 
-    if (server) client.publish(topic.c_str(), buffer, retain);
-    else broker.publish(topic.c_str(), buffer, retain);
+    client.publish(topic.c_str(), buffer, false);
+    broker.publish(topic.c_str(), buffer, false);
 }
 
-void MQTTController::publishCombined(bool server, bool retain) {
+void MQTTController::publishString(const String& topic, const String& value) {
+    client.publish(topic.c_str(), value.c_str(), false);
+    broker.publish(topic.c_str(), value.c_str(), false);
+}
+
+void MQTTController::publishCombined() {
     if (!Memory::verifyContent()) return;
     system->updateDisplayTemperatures();
 
@@ -227,16 +271,11 @@ void MQTTController::publishCombined(bool server, bool retain) {
     float tempOut = system->getTemperatureOut();
     float tempIn = system->getTemperatureIn();
     int target = system->getTarget();
+    int isOn = system->getOn();
 
     char buffer[64];
-    snprintf(buffer, sizeof(buffer), "%.2f,%.2f,%.2f,%.2f,%d", power, flow, tempOut, tempIn, target);
+    snprintf(buffer, sizeof(buffer), "%.2f,%.2f,%.2f,%.2f,%d,%d", power, flow, tempOut, tempIn, target, isOn);
 
-    if (server) client.publish(topicUpdates.c_str(), buffer, retain);
-    else broker.publish(topicUpdates.c_str(), buffer, retain);
-
-    if (system->getOn()) {
-        publishInt(topicIsOn, server ? 1 : 0, server, true);
-    } else {
-        publishInt(topicIsOn, server ? 0 : 1, server, true);
-    }
+    client.publish(topicUpdates.c_str(), buffer, false);
+    broker.publish(topicUpdates.c_str(), buffer, false);
 }

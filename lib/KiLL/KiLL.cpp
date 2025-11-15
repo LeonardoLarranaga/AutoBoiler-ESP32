@@ -85,14 +85,14 @@ void KiLL::onAdvice() {
 
 void KiLL::started() {
   display.showStartupAnimation();
-  display.showTemperatures(temperatureIn, target);
+  updateDisplayTemperatures();
   if(isOnline) {
     display.startAutoStatus();
-  } else {
+  } else if (Memory::verifyContent()) {
     display.showStatusOffline(("KiLL-" + boilerId).c_str());
   }
 }
 
 void KiLL::updateDisplayTemperatures() {
-  display.showTemperatures(temperatureOut, target);
+  if (isOn) display.showTemperatures(temperatureOut, target);
 }
