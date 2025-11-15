@@ -7,7 +7,7 @@ PowerControl::PowerControl(KiLL* sys)
       setpoint(0),
       outputMux(portMUX_INITIALIZER_UNLOCKED) {
     
-    pid = new PID(&input, &output, &setpoint, 1.5, 0.5, 1.0, DIRECT);
+    pid = new PID(&input, &output, &setpoint, 2.0, 0.5, 1.5, DIRECT);
     
     // Configurar límites de salida (0-100%)
     pid->SetOutputLimits(0, 100);
@@ -45,8 +45,13 @@ void PowerControl::pidTask(void* pvParameters) {
 
             // Ejecutar el cálculo del PID
             self->pid->Compute();
-            Serial.printf("%.2f\n", self->output);
-            
+            long now = millis();
+            int output = self->output;
+            int target = self->setpoint;
+            float tempOut = self->input;
+            float tempIn = self->system->getTemperatureIn();
+            float waterFlow = self->system->getWaterFlow();
+            Serial.printf("%ld,%d,%d,%f,%f,%f\n", now, output, target, tempOut, tempIn, waterFlow);
         } else {
             portENTER_CRITICAL(&self->outputMux);
             self->output = 0;
